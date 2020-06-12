@@ -1,0 +1,82 @@
+trigger: none
+
+pool:
+  vmImage: 'windows-latest'
+variables:
+  solution: 'WebApp.sln'
+  buildPlatform: 'Any CPU'
+  buildConfiguration: 'release'
+
+steps:
+- task: NuGetToolInstaller@1
+- task: NuGetCommand@2
+  inputs:
+    restoreSolution: '$(solution)'
+     
+- task: VSBuild@1
+  inputs:
+    solution: '$(solution)'
+    msbuildArgs: '/p:DeployOnBuild=true /p:Configuration=Release  /p:WebPublishMethod=FileSystem /p:DeleteExistingFiles=True /p:publishUrl="$(build.artifactStagingDirectory)\WebApp"'
+    platform: '$(buildPlatform)'
+    configuration: '$(buildConfiguration)'
+
+- task: CopyFiles@2
+  inputs:
+    SourceFolder: 'template'
+    Contents: '**'
+    TargetFolder: '$(Build.ArtifactStagingDirectory)/template'
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    ArtifactName: 'webapp.zip'
+    publishLocation: 'Container'
+
+#- task: DotNetCoreCLI@2
+#  displayName: 'C#  UNIT TESTING'
+#  inputs:
+#    command: 'test'
+#    projects: '**/CatDogUnitTestProject/Cat.Dog.NUnitTestProject/Cat.Dog.NUnitTestProject.csproj'
+#    testRunTitle: 'UNIT TEST  CAT & DOG'
+- task: PowerShell@2
+  displayName: 'C#  Unit Testing'
+  inputs:
+    targetType: 'inline'  
+    script: | 
+      $env:DOTNET_CLI_TELEMETRY_OPTOUT=1 
+      dotnet test 'CatDogUnitTestProject/Cat.Dog.NUnitTestProject/Cat.Dog.NUnitTestProject.csproj' -l:"trx;LogFileName=$(build.artifactStagingDirectory)\UnitTesting.trx"      
+      dotnet add 'CatDogUnitTestProject/Cat.Dog.NUnitTestProject/Cat.Dog.NUnitTestProject.csproj' package NunitXml.TestLogger --version 2.1.62 
+      dotnet test 'CatDogUnitTestProject/Cat.Dog.NUnitTestProject/Cat.Dog.NUnitTestProject.csproj' -l:"nunit;LogFilePath=$(build.artifactStagingDirectory)\UnitTesting.xml"      
+
+
+- task: PublishTestResults@2
+  inputs:
+    testResultsFormat: 'VSTest'
+    testResultsFiles: '$(build.artifactStagingDirectory)\UnitTesting.trx'
+    failTaskOnFailedTests: false
+    testRunTitle: 'UNIT TEST  CAT & DOG TRX'
+
+- task: PublishTestResults@2
+  inputs:
+    testResultsFormat: 'nunit'
+    testResultsFiles: '$(build.artifactStagingDirectory)\UnitTesting.xml'
+    failTaskOnFailedTests: false
+    testRunTitle: 'UNIT TEST  CAT & DOG XML'    
+    
+- task: PowerShell@2
+  displayName: 'C#  Code Coverage'
+  inputs:
+    targetType: 'inline'  
+    script: | 
+      $env:DOTNET_CLI_TELEMETRY_OPTOUT=1 
+      dotnet test 'CatDogUnitTestProject/Cat.Dog.NUnitTestProject/Cat.Dog.NUnitTestProject.csproj'  --collect:"XPlat Code Coverage"  --results-directory:'$(build.artifactStagingDirectory)\'
+      
+- task: PublishCodeCoverageResults@1
+  inputs:
+    codeCoverageTool: 'Cobertura'
+    summaryFileLocation: '$(build.artifactStagingDirectory)\**\coverage.cobertura.xml'
+   # pathToSources: '111'
+   # reportDirectory: '2'
+   # additionalCodeCoverageFiles: '3'
+
+

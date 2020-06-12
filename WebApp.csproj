@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="CatDogUnitTestProject\**" />
+    <Content Remove="CatDogUnitTestProject\**" />
+    <EmbeddedResource Remove="CatDogUnitTestProject\**" />
+    <None Remove="CatDogUnitTestProject\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="Pages\Privacy.cshtml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Pages\Shared\images\" />
+  </ItemGroup>
+
+</Project>
